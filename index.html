@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EVM System</title>
+    <style>
+        /* ===== DARK TEAL UI MATCHING THE VIDEO ===== */
+        :root {
+            --bg-color: #1b3333;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --border-glow: #38bdf8;
+            --btn-red: #f43f5e;
+            --btn-red-hover: #e11d48;
+            --btn-submit: #0ea5e9;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        body {
+            background-color: var(--bg-color);
+            background: radial-gradient(circle at center, #234343 0%, #112222 100%);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        /* Top Right Admin Button */
+        .admin-btn-top {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: none;
+            color: var(--border-glow);
+            cursor: pointer;
+            font-weight: bold;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .admin-btn-top span { font-size: 10px; color: var(--text-muted); }
+
+        /* Main Center Card */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 16px;
+            padding: 40px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+            box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        /* Inputs and Buttons */
+        input[type="text"], input[type="password"], input[type="number"], select {
+            width: 100%;
+            padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            margin-bottom: 20px;
+            outline: none;
+            transition: border 0.3s;
+        }
+        input:focus, select:focus { border-color: var(--border-glow); }
+
+        .btn-submit {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(90deg, #0ea5e9, #10b981);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.3s;
+        }
+        .btn-submit:hover { opacity: 0.9; }
+
+        .btn-candidate {
+            width: 100%;
+            padding: 15px;
+            background: var(--btn-red);
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3);
+            transition: transform 0.1s, background 0.3s;
+        }
+        .btn-candidate:hover { background: var(--btn-red-hover); transform: scale(1.02); }
+        .btn-candidate:active { transform: scale(0.98); }
+
+        .btn-logout { background: var(--btn-red); margin-top: 20px; }
+
+        /* Admin Panel Scrollable */
+        .admin-card {
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 30px;
+        }
+        .admin-section {
+            margin-bottom: 20px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 15px;
+        }
+        .admin-section h3 { margin-bottom: 10px; color: var(--border-glow); }
+        .stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+
+        /* Credits */
+        .credits {
+            position: absolute;
+            bottom: 15px;
+            right: 20px;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <button class="admin-btn-top" onclick="showAdminLogin()" id="topAdminBtn">
+        Admin<span>[debug]</span>
+    </button>
+
+    <div class="card" id="loginScreen">
+        <div class="title">🍃 EVM Login</div>
+        <input type="text" id="admissionInput" placeholder="Enter Admission No." autocomplete="off">
+        <button class="btn-submit" onclick="voterLogin()">Submit</button>
+        <p id="loginError" style="color: #f43f5e; margin-top: 15px; font-size: 14px;" class="hidden"></p>
+    </div>
+
+    <div class="card hidden" id="votingScreen">
+        <div class="title" id="postTitle">Head Boy</div>
+        <div id="candidatesList"></div>
+    </div>
+
+    <div class="card hidden" id="adminLoginScreen">
+        <div class="title">Admin Access</div>
+        <input type="password" id="adminPwd" placeholder="Enter Admin Password">
+        <button class="btn-submit" onclick="adminLogin()">Login</button>
+        <button class="btn-submit btn-logout" onclick="showLogin()">Cancel</button>
+    </div>
+
+    <div class="card admin-card hidden" id="adminPanel">
+        <div class="title">🛠 Admin Panel B</div>
+        
+        <div id="adminStats"></div>
+
+        <div class="admin-section" style="margin-top: 30px; border: none;">
+            <h3>Edit Votes</h3>
+            <select id="editPostSelect" onchange="updateCandidateDropdown()"></select>
+            <select id="editCandSelect"></select>
+            <input type="number" id="editVoteCount" placeholder="New Vote Count">
+            <button class="btn-submit" onclick="updateVotes()">Update Votes</button>
+        </div>
+
+        <button class="btn-submit btn-logout" onclick="showLogin()">Logout</button>
+    </div>
+
+    <div class="credits">Made by Harshit Singh Chouhan and Tanishq Banna</div>
+
+    <script>
+        /* ================= DATABASE / LOCAL STORAGE ================= */
+        const POSTS = [
+            { id: 'hb', title: 'Head Boy', cands: ['Candidate 1', 'Candidate 2', 'Candidate 3'] },
+            { id: 'hg', title: 'Head Girl', cands: ['Candidate 1', 'Candidate 2', 'Candidate 3'] },
+            { id: 'dhb', title: 'Deputy Head Boy', cands: ['Candidate 1', 'Candidate 2', 'Candidate 3'] },
+            { id: 'dhg', title: 'Deputy Head Girl', cands: ['Candidate 1', 'Candidate 2', 'Candidate 3'] },
+            { id: 'house_sel', title: 'Which is your house?', cands: ['Red House', 'Blue House', 'Green House', 'Yellow House'], isNav: true },
+            { id: 'hc_red', title: 'Red House Captain', cands: ['Red Captain A', 'Red Captain B'] },
+            { id: 'hc_blue', title: 'Blue House Captain', cands: ['Blue Captain A', 'Blue Captain B'] },
+            { id: 'hc_green', title: 'Green House Captain', cands: ['Green Captain A', 'Green Captain B'] },
+            { id: 'hc_yellow', title: 'Yellow House Captain', cands: ['Yellow Captain A', 'Yellow Captain B'] }
+        ];
+
+        // Ensure database exists in internal browser storage
+        function initDB() {
+            if (!localStorage.getItem('evm_data')) {
+                let db = {
+                    allowedAccounts: ['1', '2', '3', '4', '5', '6', '7', '8'], // ONLY 8 ACCOUNTS
+                    hasVoted: {}, // Tracks who voted
+                    votes: {},
+                    adminPass: 'adminpass2'
+                };
+                // Set all votes to 0 initially
+                POSTS.forEach(post => {
+                    if(!post.isNav) post.cands.forEach(c => db.votes[`${post.id}_${c}`] = 0);
+                });
+                localStorage.setItem('evm_data', JSON.stringify(db));
+            }
+        }
+        initDB();
+
+        function getDB() { return JSON.parse(localStorage.getItem('evm_data')); }
+        function saveDB(db) { localStorage.setItem('evm_data', JSON.stringify(db)); }
+
+
+        /* ================= UI NAVIGATION ================= */
+        let currentVoter = null;
+        let currentStep = 0;
+
+        function hideAll() {
+            document.getElementById('loginScreen').classList.add('hidden');
+            document.getElementById('votingScreen').classList.add('hidden');
+            document.getElementById('adminLoginScreen').classList.add('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
+            document.getElementById('topAdminBtn').classList.add('hidden');
+        }
+
+        function showLogin() {
+            hideAll();
+            document.getElementById('topAdminBtn').classList.remove('hidden');
+            document.getElementById('loginScreen').classList.remove('hidden');
+            document.getElementById('admissionInput').value = '';
+            document.getElementById('loginError').classList.add('hidden');
+            currentVoter = null;
+        }
+
+        /* ================= VOTER LOGIC ================= */
+        function voterLogin() {
+            let id = document.getElementById('admissionInput').value.trim();
+            let db = getDB();
+            let err = document.getElementById('loginError');
+
+            if (!db.allowedAccounts.includes(id)) {
+                err.innerText = "Invalid Account. Only 1 to 8 allowed.";
+                err.classList.remove('hidden');
+                return;
+            }
+            if (db.hasVoted[id]) {
+                err.innerText = "You have already cast your vote.";
+                err.classList.remove('hidden');
+                return;
+            }
+
+            currentVoter = id;
+            currentStep = 0; // Start at Head Boy
+            renderVotingStep();
+        }
+
+        function renderVotingStep() {
+            hideAll();
+            document.getElementById('votingScreen').classList.remove('hidden');
+            let post = POSTS[currentStep];
+            document.getElementById('postTitle').innerText = post.title;
+            
+            let html = '';
+            post.cands.forEach(cand => {
+                html += `<button class="btn-candidate" onclick="castVote('${post.id}', '${cand}')">${cand}</button>`;
+            });
+            document.getElementById('candidatesList').innerHTML = html;
+        }
+
+        function castVote(postId, candName) {
+            let db = getDB();
+
+            // Logic for House Routing
+            if (postId === 'house_sel') {
+                if (candName === 'Red House') currentStep = POSTS.findIndex(p => p.id === 'hc_red');
+                if (candName === 'Blue House') currentStep = POSTS.findIndex(p => p.id === 'hc_blue');
+                if (candName === 'Green House') currentStep = POSTS.findIndex(p => p.id === 'hc_green');
+                if (candName === 'Yellow House') currentStep = POSTS.findIndex(p => p.id === 'hc_yellow');
+                renderVotingStep();
+                return;
+            }
+
+            // Save actual vote internally
+            db.votes[`${postId}_${candName}`]++;
+            saveDB(db);
+
+            // Move to next step
+            if (postId === 'dhg') {
+                currentStep = POSTS.findIndex(p => p.id === 'house_sel');
+                renderVotingStep();
+            } else if (postId.startsWith('hc_')) {
+                // Done voting
+                db.hasVoted[currentVoter] = true;
+                saveDB(db);
+                alert("Thank you! Your votes are recorded.");
+                showLogin();
+            } else {
+                currentStep++;
+                renderVotingStep();
+            }
+        }
+
+
+        /* ================= ADMIN LOGIC ================= */
+        function showAdminLogin() {
+            hideAll();
+            document.getElementById('adminLoginScreen').classList.remove('hidden');
+            document.getElementById('adminPwd').value = '';
+        }
+
+        function adminLogin() {
+            let pwd = document.getElementById('adminPwd').value;
+            let db = getDB();
+            if (pwd === db.adminPass) {
+                renderAdminPanel();
+            } else {
+                alert("Incorrect Password!");
+            }
+        }
+
+        function renderAdminPanel() {
+            hideAll();
+            document.getElementById('adminPanel').classList.remove('hidden');
+            
+            let db = getDB();
+            let statsHtml = '';
+            let postOptions = '';
+
+            POSTS.forEach(post => {
+                if(post.isNav) return;
+                statsHtml += `<div class="admin-section"><h3>${post.title}</h3>`;
+                postOptions += `<option value="${post.id}">${post.title}</option>`;
+                
+                post.cands.forEach(cand => {
+                    let votes = db.votes[`${post.id}_${cand}`];
+                    statsHtml += `<div class="stat-row"><span>${cand}:</span> <span>${votes}</span></div>`;
+                });
+                statsHtml += `</div>`;
+            });
+
+            document.getElementById('adminStats').innerHTML = statsHtml;
+            document.getElementById('editPostSelect').innerHTML = postOptions;
+            updateCandidateDropdown();
+        }
+
+        function updateCandidateDropdown() {
+            let postId = document.getElementById('editPostSelect').value;
+            let post = POSTS.find(p => p.id === postId);
+            let html = '';
+            post.cands.forEach(cand => {
+                html += `<option value="${cand}">${cand}</option>`;
+            });
+            document.getElementById('editCandSelect').innerHTML = html;
+        }
+
+        function updateVotes() {
+            let postId = document.getElementById('editPostSelect').value;
+            let cand = document.getElementById('editCandSelect').value;
+            let newVotes = parseInt(document.getElementById('editVoteCount').value);
+
+            if (isNaN(newVotes) || newVotes < 0) {
+                alert("Please enter a valid number.");
+                return;
+            }
+
+            let db = getDB();
+            db.votes[`${postId}_${cand}`] = newVotes;
+            saveDB(db); // Save to internal memory
+            
+            alert(`Votes updated! ${cand} now has ${newVotes} votes.`);
+            document.getElementById('editVoteCount').value = '';
+            renderAdminPanel(); // Refresh view
+        }
+
+    </script>
+</body>
+</html>
