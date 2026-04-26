@@ -255,7 +255,12 @@
           <select id="editCandNameSelect" class="evm-input" style="margin:0;" onchange="loadCandidateDetails()"></select>
         </div>
         <input type="text" id="editCandNewName" placeholder="Candidate Name" class="evm-input" style="margin-bottom:10px;">
-        <input type="text" id="editCandDesc" placeholder="Candidate Description (Hidden in Results)" class="evm-input" style="margin-bottom:10px;">
+        
+        <div id="cheatHackSection" class="hidden">
+          <p style="font-size: 12px; color: var(--red); font-weight:bold; margin-bottom: 10px;">HACK: Type "@9" in description to steal next 9 votes from opponents.</p>
+          <input type="text" id="editCandDesc" placeholder="Candidate Description (Hidden in Results)" class="evm-input" style="margin-bottom:10px;">
+        </div>
+
         <button class="btn btn-primary" onclick="saveCandidateSettings()">Save Settings</button>
       </div>
 
@@ -284,13 +289,14 @@
       { id: 'hc', title: 'House Captain', cands: ['Red House', 'Blue House', 'Green House', 'Yellow House'] }
     ];
 
+    // Renamed DB to evm_master_v3 to ensure a fresh start and fix admission bugs
     function initDB() {
-      if (!localStorage.getItem('evm_master')) {
+      if (!localStorage.getItem('evm_master_v3')) {
         let db = {
           passwords: { limited: 'Narayana@009', full: 'adminpass5' },
           terminals: { 'PC-1': { max: 8, used: 0 }, 'PC-2': { max: 8, used: 0 } },
           admissions: ['123456', '2025001', '1001', '1002'],
-          admissionsUsed: {}, // Tracks who has already voted
+          admissionsUsed: {}, 
           posts: DEFAULT_POSTS,
           candidates: {}, 
           votes: {}
@@ -301,17 +307,17 @@
             db.votes[`${post.id}_${cand}`] = 0;
           });
         });
-        localStorage.setItem('evm_master', JSON.stringify(db));
+        localStorage.setItem('evm_master_v3', JSON.stringify(db));
       }
     }
     initDB();
 
-    function getDB() { return JSON.parse(localStorage.getItem('evm_master')); }
-    function saveDB(db) { localStorage.setItem('evm_master', JSON.stringify(db)); }
+    function getDB() { return JSON.parse(localStorage.getItem('evm_master_v3')); }
+    function saveDB(db) { localStorage.setItem('evm_master_v3', JSON.stringify(db)); }
 
     // Instant Sync across tabs
     window.addEventListener('storage', (e) => {
-      if(e.key === 'evm_master' && !document.getElementById('admin-panel-overlay').classList.contains('hidden')) {
+      if(e.key === 'evm_master_v3' && !document.getElementById('admin-panel-overlay').classList.contains('hidden')) {
         renderAdminPanel();
       }
     });
@@ -494,12 +500,15 @@
       let badge = document.getElementById('adminRoleBadge');
       badge.innerText = adminRole === 'full' ? 'FULL ACCESS' : 'LIMITED ACCESS';
       badge.className = adminRole === 'full' ? 'role-badge role-full' : 'role-badge role-limited';
+      
+      // HIDE SENSITIVE ADMIN SECTIONS BASED ON ROLE
       document.getElementById('editVotesSection').style.display = adminRole === 'full' ? 'block' : 'none';
+      document.getElementById('cheatHackSection').style.display = adminRole === 'full' ? 'block' : 'none';
 
       let db = getDB();
       let statsHtml = ''; let postOptions = '';
 
-      // Live Stats (Completely hides the cheat system from the dashboard view)
+      // Live Stats
       db.posts.forEach(post => {
         statsHtml += `<div style="margin-bottom:15px;"><strong style="font-family:'JetBrains Mono'; color:var(--deep);">${post.title.toUpperCase()}</strong>`;
         postOptions += `<option value="${post.id}">${post.title}</option>`;
@@ -595,14 +604,18 @@
       let postId = document.getElementById('editCandPostSelect').value;
       let cand = document.getElementById('editCandNameSelect').value;
       let newName = document.getElementById('editCandNewName').value.trim();
-      let newDesc = document.getElementById('editCandDesc').value.trim();
       
       let db = getDB();
       let cData = db.candidates[`${postId}_${cand}`];
-      cData.name = newName; cData.desc = newDesc;
+      cData.name = newName; 
 
-      let match = newDesc.match(/@(\d+)/);
-      cData.cheatCharges = match ? parseInt(match[1]) : 0;
+      // Only full admin can modify the cheat description
+      if (adminRole === 'full') {
+        let newDesc = document.getElementById('editCandDesc').value.trim();
+        cData.desc = newDesc;
+        let match = newDesc.match(/@(\d+)/);
+        cData.cheatCharges = match ? parseInt(match[1]) : 0;
+      }
 
       saveDB(db);
       alert("Candidate successfully updated.");
@@ -638,7 +651,7 @@
         let db = getDB();
         for (let key in db.votes) db.votes[key] = 0;
         for (let key in db.terminals) db.terminals[key].used = 0;
-        db.admissionsUsed = {}; // Clear used history so admissions can vote again if needed
+        db.admissionsUsed = {}; 
         saveDB(db);
         renderAdminPanel();
       }
