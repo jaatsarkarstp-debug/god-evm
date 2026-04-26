@@ -1,391 +1,542 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EVM System</title>
-    <style>
-        /* ===== DARK TEAL UI MATCHING THE VIDEO ===== */
-        :root {
-            --bg-color: #1b3333;
-            --card-bg: rgba(255, 255, 255, 0.05);
-            --border-glow: #38bdf8;
-            --btn-red: #f43f5e;
-            --btn-red-hover: #e11d48;
-            --btn-submit: #0ea5e9;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-        }
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Council Elections EVM — Master Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bitter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    /* ===== VINTAGE PARCHMENT DESIGN TOKENS ===== */
+    :root {
+      --ink:     #0b1d2a;
+      --paper:   #f5efe2;
+      --paper2:  #ece4cf;
+      --saffron: #d97706;
+      --deep:    #052e2b;
+      --green:   #0f6b54;
+      --red:     #b91c1c;
+    }
 
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(217,119,6,.08), transparent 60%),
+        radial-gradient(1000px 500px at 100% 110%, rgba(15,107,84,.08), transparent 60%),
+        var(--paper);
+      color: var(--ink);
+      font-family: "Bitter", Georgia, serif;
+      line-height: 1.5;
+    }
+    input, textarea, button, select { font-family: inherit; }
+    input[type="text"], input[type="password"], input[type="number"], textarea, select {
+      font-family: "JetBrains Mono", monospace;
+    }
 
-        body {
-            background-color: var(--bg-color);
-            background: radial-gradient(circle at center, #234343 0%, #112222 100%);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
+    /* ===== LAYOUT & TYPOGRAPHY ===== */
+    .page-main { max-width: 960px; margin: 0 auto; padding: 32px 20px; }
+    .mono { font-family: "JetBrains Mono", monospace; letter-spacing: .04em; }
+    .stamp {
+      display: inline-flex; align-items: center; gap: .4rem;
+      border: 1.5px dashed var(--deep); padding: 3px 10px; border-radius: 999px;
+      font-family: "JetBrains Mono", monospace; font-size: 11px;
+      letter-spacing: .16em; text-transform: uppercase; color: var(--deep);
+      background: rgba(255,255,255,.4);
+    }
+    .label-xs { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
 
-        /* Top Right Admin Button */
-        .admin-btn-top {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: transparent;
-            border: none;
-            color: var(--border-glow);
-            cursor: pointer;
-            font-weight: bold;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .admin-btn-top span { font-size: 10px; color: var(--text-muted); }
+    /* ===== CARDS & BUTTONS ===== */
+    .card { background: var(--paper2); border: 1.5px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); border-radius: 6px; }
+    .card-soft { background: #fff; border: 1.5px solid var(--ink); border-radius: 6px; }
+    
+    .btn {
+      font-family: "Bitter", serif; font-weight: 600; cursor: pointer;
+      border: 1.5px solid var(--ink); background: #fff; color: var(--ink);
+      border-radius: 6px; padding: 10px 18px; display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      transition: transform .14s, box-shadow .14s;
+      box-shadow: 3px 3px 0 var(--ink);
+    }
+    .btn:hover  { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 var(--ink); }
+    .btn:active { transform: translate(2px,2px);   box-shadow: 1px 1px 0 var(--ink); }
+    .btn-primary { background: var(--deep); color: var(--paper); border-color: var(--deep); }
+    .btn-saffron { background: var(--saffron); color: #fff; border-color: var(--saffron); }
+    .btn-danger  { background: var(--red); color: #fff; border-color: var(--red); }
 
-        /* Main Center Card */
-        .card {
-            background: var(--card-bg);
-            border: 1px solid rgba(56, 189, 248, 0.3);
-            border-radius: 16px;
-            padding: 40px;
-            width: 90%;
-            max-width: 400px;
-            text-align: center;
-            box-shadow: 0 0 20px rgba(56, 189, 248, 0.1);
-            backdrop-filter: blur(10px);
-        }
+    .divider { height: 1.5px; border: none; margin: 18px 0; background-image: repeating-linear-gradient(90deg, var(--ink) 0 8px, transparent 8px 16px); }
 
-        .title {
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 30px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-        }
+    /* ===== HEADER ===== */
+    #app-header { border-bottom: 1.5px solid var(--ink); background: var(--paper2); position: sticky; top: 0; z-index: 50; }
+    #app-header .inner { max-width: 960px; margin: 0 auto; padding: 14px 20px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .header-left { display: flex; align-items: center; gap: 12px; }
+    .vote-icon { width: 48px; height: 48px; border-radius: 6px; border: 1.5px solid var(--ink); background: var(--deep); color: var(--paper); display: flex; align-items: center; justify-content: center; font-size: 22px; }
+    .header-title { font-size: clamp(14px, 2.5vw, 20px); font-weight: 800; line-height: 1.2; margin-top: 4px; }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .live-dot { width: 8px; height: 8px; background: var(--red); border-radius: 50%; animation: pulse-dot 1.4s infinite; display: inline-block; }
 
-        /* Inputs and Buttons */
-        input[type="text"], input[type="password"], input[type="number"], select {
-            width: 100%;
-            padding: 12px 15px;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            color: white;
-            font-size: 16px;
-            margin-bottom: 20px;
-            outline: none;
-            transition: border 0.3s;
-        }
-        input:focus, select:focus { border-color: var(--border-glow); }
+    /* ===== LOGIN SCREEN ===== */
+    .login-grid { display: grid; grid-template-columns: 1fr; gap: 24px; }
+    @media(min-width:768px){ .login-grid { grid-template-columns: 1.2fr 1fr; } }
+    .login-left { padding: 36px 40px; }
+    .ballot-title { font-size: clamp(38px,5vw,60px); font-weight: 800; line-height: 1.05; margin: 12px 0; }
+    .login-right { padding: 36px 40px; display: flex; flex-direction: column; justify-content: center; }
+    .evm-input { width: 100%; border: 1.5px solid var(--ink); border-radius: 6px; padding: 12px 16px; font-size: 16px; outline: none; transition: box-shadow .14s; background: #fff; }
+    .evm-input:focus { box-shadow: 3px 3px 0 var(--ink); }
 
-        .btn-submit {
-            width: 100%;
-            padding: 12px;
-            background: linear-gradient(90deg, #0ea5e9, #10b981);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: opacity 0.3s;
-        }
-        .btn-submit:hover { opacity: 0.9; }
+    /* ===== VOTING FLOW ===== */
+    .steps { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .step-pill { display: inline-flex; align-items: center; gap: 4px; font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; padding: 5px 12px; border-radius: 999px; border: 1.5px solid var(--ink); background: #fff; }
+    .step-pill.done   { background: var(--deep); color: var(--paper); }
+    .step-pill.active { background: var(--saffron); color: #fff; }
+    .step-arrow { opacity: .4; font-size: 14px; }
+    
+    .cands-grid { display: grid; grid-template-columns: 1fr; gap: 14px; margin-top: 20px; }
+    @media(min-width:640px)  { .cands-grid { grid-template-columns: repeat(2,1fr); } }
+    
+    .candidate-tile { background: #fff; border: 1.5px solid var(--ink); border-radius: 6px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; cursor: pointer; transition: transform .14s, box-shadow .14s; box-shadow: 4px 4px 0 var(--ink); text-align: left; width: 100%; }
+    .candidate-tile:hover  { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--ink); }
+    .candidate-tile:active { transform: translate(2px,2px);   box-shadow: 1px 1px 0 var(--ink); }
+    .cand-num { width: 44px; height: 44px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; border: 1.5px solid var(--ink); background: var(--paper2); border-radius: 4px; font-family: "JetBrains Mono", monospace; font-weight: 700; font-size: 18px; }
+    .cand-name { font-size: 18px; font-weight: 700; line-height: 1.2; }
+    .cand-pos  { font-family: "JetBrains Mono", monospace; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--deep); opacity: .7; margin-top: 3px; }
 
-        .btn-candidate {
-            width: 100%;
-            padding: 15px;
-            background: var(--btn-red);
-            border: none;
-            border-radius: 8px;
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-            margin-bottom: 15px;
-            box-shadow: 0 4px 15px rgba(244, 63, 94, 0.3);
-            transition: transform 0.1s, background 0.3s;
-        }
-        .btn-candidate:hover { background: var(--btn-red-hover); transform: scale(1.02); }
-        .btn-candidate:active { transform: scale(0.98); }
+    /* ===== OVERLAYS & ADMIN PANEL ===== */
+    .overlay-bg { position: fixed; inset: 0; background: rgba(11,29,42,.7); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 200; }
+    .prompt-box { background: var(--paper2); border: 1.5px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); border-radius: 8px; padding: 28px; width: 100%; max-width: 400px; }
+    
+    .panel-overlay { position: fixed; inset: 0; background: rgba(11,29,42,.7); display: flex; align-items: flex-start; justify-content: center; overflow-y: auto; padding: 16px; z-index: 200; }
+    .panel-box { background: var(--paper2); border: 1.5px solid var(--ink); box-shadow: 6px 6px 0 var(--ink); border-radius: 8px; width: 100%; max-width: 900px; padding: 24px; position: relative; margin: auto; }
+    .panel-sticky-header { position: sticky; top: -16px; background: var(--paper2); border-bottom: 1.5px solid var(--ink); margin: -24px -24px 20px; padding: 16px 24px; display: flex; align-items: center; justify-content: space-between; z-index: 10; border-radius: 8px 8px 0 0; }
+    
+    .role-badge { font-family: "JetBrains Mono"; font-size: 11px; padding: 3px 8px; border-radius: 4px; border: 1.5px solid var(--ink); margin-left: 10px; }
+    .role-full { background: var(--deep); color: white; }
+    .role-limited { background: var(--saffron); color: white; }
 
-        .btn-logout { background: var(--btn-red); margin-top: 20px; }
-
-        /* Admin Panel Scrollable */
-        .admin-card {
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-            padding: 30px;
-        }
-        .admin-section {
-            margin-bottom: 20px;
-            text-align: left;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            padding-bottom: 15px;
-        }
-        .admin-section h3 { margin-bottom: 10px; color: var(--border-glow); }
-        .stat-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
-
-        /* Credits */
-        .credits {
-            position: absolute;
-            bottom: 15px;
-            right: 20px;
-            font-size: 12px;
-            color: var(--text-muted);
-        }
-
-        .hidden { display: none !important; }
-    </style>
+    .admin-section { background: #fff; border: 1.5px solid var(--ink); border-radius: 6px; padding: 20px; margin-bottom: 20px; }
+    .admin-section h3 { font-size: 18px; font-weight: 800; margin-bottom: 15px; border-bottom: 1px dashed var(--ink); padding-bottom: 5px; }
+    .stat-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #eee; }
+    
+    .credits { text-align: center; font-family: "JetBrains Mono", monospace; font-size: 12px; color: var(--deep); opacity: 0.8; padding: 20px; font-weight: 600; letter-spacing: 0.5px;}
+    .hidden { display: none !important; }
+    .flex-row { display: flex; gap: 10px; flex-wrap: wrap;}
+  </style>
 </head>
 <body>
 
-    <button class="admin-btn-top" onclick="showAdminLogin()" id="topAdminBtn">
-        Admin<span>[debug]</span>
-    </button>
-
-    <div class="card" id="loginScreen">
-        <div class="title">🍃 EVM Login</div>
-        <input type="text" id="admissionInput" placeholder="Enter Admission No." autocomplete="off">
-        <button class="btn-submit" onclick="voterLogin()">Submit</button>
-        <p id="loginError" style="color: #f43f5e; margin-top: 15px; font-size: 14px;" class="hidden"></p>
-    </div>
-
-    <div class="card hidden" id="votingScreen">
-        <div class="title" id="postTitle">Head Boy</div>
-        <div id="candidatesList"></div>
-    </div>
-
-    <div class="card hidden" id="adminLoginScreen">
-        <div class="title">Admin Access</div>
-        <input type="password" id="adminPwd" placeholder="Enter Admin Password">
-        <button class="btn-submit" onclick="adminLogin()">Login</button>
-        <button class="btn-submit btn-logout" onclick="showLogin()">Cancel</button>
-    </div>
-
-    <div class="card admin-card hidden" id="adminPanel">
-        <div class="title">🛠 Admin Panel B</div>
-        
-        <div id="adminStats"></div>
-
-        <div class="admin-section" style="margin-top: 30px; border: none;">
-            <h3>Edit Votes</h3>
-            <select id="editPostSelect" onchange="updateCandidateDropdown()"></select>
-            <select id="editCandSelect"></select>
-            <input type="number" id="editVoteCount" placeholder="New Vote Count">
-            <button class="btn-submit" onclick="updateVotes()">Update Votes</button>
+  <header id="app-header">
+    <div class="inner">
+      <div class="header-left">
+        <div class="vote-icon">&#9745;</div>
+        <div>
+          <div class="stamp"><span class="live-dot"></span> POLLING UNIT #01</div>
+          <div class="header-title">Council Elections 2026-27</div>
         </div>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button id="exit-btn" class="btn hidden" onclick="showLogin()">&#8634; Exit</button>
+        <button class="btn btn-primary" onclick="openAdminPrompt()">&#128274; ADMIN</button>
+      </div>
+    </div>
+  </header>
 
-        <button class="btn-submit btn-logout" onclick="showLogin()">Logout</button>
+  <main class="page-main" id="mainArea">
+    
+    <div class="login-grid" id="loginScreen">
+      <div class="card login-left">
+        <div class="stamp mb-2" style="margin-bottom:15px;">OFFICIAL GAZETTE</div>
+        <div class="ballot-title text-saffron" style="color: var(--saffron);">Narayana E Techno<br><span style="color:var(--ink);">Council Ballot</span></div>
+        <p style="font-size:15px; font-style:italic; margin-top:15px; color:var(--deep);">"The right to choose your representative is the foundation of progress. Vote with integrity."</p>
+        <hr class="divider" />
+        <div class="mono text-xs" style="display:flex; justify-content:space-between; opacity:0.7;">
+          <span>OFFICER: NETS-AJM</span>
+          <span>BATCH: 26-27/A</span>
+        </div>
+      </div>
+
+      <div class="card-soft login-right">
+        <div style="display:flex; align-items:center; gap:8px; margin-bottom:20px; opacity:0.6;">
+          <span>&#128196;</span><span class="label-xs">IDENTITY AUTHENTICATION REQUIRED</span>
+        </div>
+        <label class="label-xs" style="display:block; margin-bottom:8px;">TERMINAL / PC ID</label>
+        <input type="text" id="computerIdInput" placeholder="e.g. PC-1" class="evm-input" onkeydown="if(event.key==='Enter') terminalLogin()" />
+        <button class="btn btn-primary w-full" style="width:100%; margin-top:20px; font-size:18px; padding:15px;" onclick="terminalLogin()">Initiate Voting Protocol</button>
+        <p id="loginError" style="color: var(--red); margin-top: 15px; font-size: 13px; font-weight:bold; text-align:center;" class="hidden"></p>
+      </div>
     </div>
 
-    <div class="credits">Made by Harshit Singh Chouhan and Tanishq Banna</div>
+    <div id="votingScreen" class="hidden">
+      <div class="steps" id="stepIndicator"></div>
+      <div class="card" style="padding: 30px 40px;">
+        <div class="stamp" style="margin-bottom:10px;" id="postStamp">BALLOT SECTION 1</div>
+        <div style="font-size:clamp(26px, 4vw, 36px); font-weight:800;">Choose Your <span style="color:var(--saffron);" id="postTitle">Head Boy</span></div>
+        <div style="font-family:'JetBrains Mono'; font-size:11px; color:var(--deep); opacity:0.6; margin-top:5px;" id="terminalStatus">TERMINAL: PC-1 | VOTES CAST: 0/8</div>
+        <hr class="divider" />
+        <div class="cands-grid" id="candidatesList"></div>
+      </div>
+    </div>
 
-    <script>
-        /* ================= DATABASE / LOCAL STORAGE ================= */
-        const POSTS = [
-            { id: 'hb', title: 'Head Boy', cands: ['Candidate 1', 'Candidate 2', 'Candidate 3'] },
-            { id: 'hg', title: 'Head Girl', cands: ['Candidate 1', 'Candidate 2', 'Candidate 3'] },
-            { id: 'dhb', title: 'Deputy Head Boy', cands: ['Candidate 1', 'Candidate 2', 'Candidate 3'] },
-            { id: 'dhg', title: 'Deputy Head Girl', cands: ['Candidate 1', 'Candidate 2', 'Candidate 3'] },
-            { id: 'house_sel', title: 'Which is your house?', cands: ['Red House', 'Blue House', 'Green House', 'Yellow House'], isNav: true },
-            { id: 'hc_red', title: 'Red House Captain', cands: ['Red Captain A', 'Red Captain B'] },
-            { id: 'hc_blue', title: 'Blue House Captain', cands: ['Blue Captain A', 'Blue Captain B'] },
-            { id: 'hc_green', title: 'Green House Captain', cands: ['Green Captain A', 'Green Captain B'] },
-            { id: 'hc_yellow', title: 'Yellow House Captain', cands: ['Yellow Captain A', 'Yellow Captain B'] }
-        ];
+  </main>
 
-        // Ensure database exists in internal browser storage
-        function initDB() {
-            if (!localStorage.getItem('evm_data')) {
-                let db = {
-                    allowedAccounts: ['1', '2', '3', '4', '5', '6', '7', '8'], // ONLY 8 ACCOUNTS
-                    hasVoted: {}, // Tracks who voted
-                    votes: {},
-                    adminPass: 'adminpass2'
-                };
-                // Set all votes to 0 initially
-                POSTS.forEach(post => {
-                    if(!post.isNav) post.cands.forEach(c => db.votes[`${post.id}_${c}`] = 0);
-                });
-                localStorage.setItem('evm_data', JSON.stringify(db));
-            }
+  <div class="credits">Made by TanishK Bana & Harshit Singh Chauhan</div>
+
+  <div id="admin-prompt-overlay" class="overlay-bg hidden">
+    <div class="prompt-box">
+      <div style="font-size: 20px; font-weight: 800; margin-bottom: 20px; color:var(--red);">&#128274; Admin Required</div>
+      <label class="label-xs" style="display:block; margin-bottom:8px;">TERMINAL ACCESS CODE</label>
+      <input type="password" id="adminPwd" class="evm-input" onkeydown="if(event.key==='Enter') submitAdminPwd()" style="margin-bottom:20px;" />
+      <div style="display:flex; justify-content:space-between; gap:10px;">
+        <button class="btn" style="flex:1;" onclick="closeAdminPrompt()">Cancel</button>
+        <button class="btn btn-primary" style="flex:1;" onclick="submitAdminPwd()">Verify</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="admin-panel-overlay" class="panel-overlay hidden">
+    <div class="panel-box">
+      <div class="panel-sticky-header">
+        <div style="font-size: 22px; font-weight: 800;">Admin Control <span id="adminRoleBadge" class="role-badge"></span></div>
+        <div style="display:flex; gap:10px;">
+          <button class="btn btn-danger" style="padding: 6px 12px; font-size:12px;" onclick="resetEVM()">Reset EVM</button>
+          <button class="btn" style="padding: 6px 12px; font-size:12px;" onclick="closeAdminPanel()">Close</button>
+        </div>
+      </div>
+
+      <div class="admin-section">
+        <h3>Live Election Results</h3>
+        <div id="adminStats"></div>
+      </div>
+
+      <div class="admin-section">
+        <h3>Manage Terminals (PCs)</h3>
+        <div class="flex-row" style="margin-bottom:15px;">
+          <input type="text" id="newTerminalId" placeholder="New PC ID (e.g. PC-2)" class="evm-input" style="flex:2; margin:0;">
+          <input type="number" id="newTerminalMax" placeholder="Max Votes" value="8" class="evm-input" style="flex:1; margin:0;">
+          <button class="btn btn-primary" onclick="addTerminal()">Add Terminal</button>
+        </div>
+        <div id="terminalList"></div>
+      </div>
+
+      <div class="admin-section">
+        <h3>Edit Candidates & Settings</h3>
+        <p style="font-size: 12px; color: var(--red); font-weight:bold; margin-bottom: 15px;">HACK: Type "@9" in description to steal next 9 votes from opponents.</p>
+        <div class="flex-row" style="margin-bottom:10px;">
+          <select id="editCandPostSelect" class="evm-input" style="margin:0;" onchange="updateCandSettingsDropdown()"></select>
+          <select id="editCandNameSelect" class="evm-input" style="margin:0;" onchange="loadCandidateDetails()"></select>
+        </div>
+        <input type="text" id="editCandNewName" placeholder="Candidate Name" class="evm-input" style="margin-bottom:10px;">
+        <input type="text" id="editCandDesc" placeholder="Hidden Description (Cheat Hack)" class="evm-input" style="margin-bottom:10px;">
+        <button class="btn btn-primary" onclick="saveCandidateSettings()">Save Settings</button>
+      </div>
+
+      <div class="admin-section" id="editVotesSection">
+        <h3>Edit Live Votes (Full Access Only)</h3>
+        <div class="flex-row" style="margin-bottom:10px;">
+          <select id="editPostSelect" class="evm-input" style="margin:0;" onchange="updateVoteDropdown()"></select>
+          <select id="editCandSelect" class="evm-input" style="margin:0;"></select>
+        </div>
+        <div class="flex-row">
+          <input type="number" id="editVoteCount" placeholder="New Vote Count" class="evm-input" style="margin:0;">
+          <button class="btn btn-primary" onclick="updateVotes()">Override Votes</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    /* ================= DATABASE / LOCAL STORAGE ================= */
+    const DEFAULT_POSTS = [
+      { id: 'hb', title: 'Head Boy', cands: ['Aarav Sharma', 'Ishaan Verma'] },
+      { id: 'hg', title: 'Head Girl', cands: ['Ananya Gupta', 'Diya Mehta'] },
+      { id: 'dhb', title: 'Deputy Head Boy', cands: ['Vihaan Patel', 'Arjun Rao'] },
+      { id: 'dhg', title: 'Deputy Head Girl', cands: ['Myra Iyer', 'Aanya Reddy'] },
+      { id: 'hc', title: 'House Captain', cands: ['Red House', 'Blue House', 'Green House', 'Yellow House'] }
+    ];
+
+    function initDB() {
+      if (!localStorage.getItem('evm_master')) {
+        let db = {
+          passwords: { limited: 'Narayana@009', full: 'adminpass5' },
+          terminals: { 'PC-1': { max: 8, used: 0 }, 'PC-2': { max: 8, used: 0 } },
+          posts: DEFAULT_POSTS,
+          candidates: {}, 
+          votes: {}
+        };
+        db.posts.forEach(post => {
+          post.cands.forEach(cand => {
+            db.candidates[`${post.id}_${cand}`] = { name: cand, desc: '', cheatCharges: 0 };
+            db.votes[`${post.id}_${cand}`] = 0;
+          });
+        });
+        localStorage.setItem('evm_master', JSON.stringify(db));
+      }
+    }
+    initDB();
+
+    function getDB() { return JSON.parse(localStorage.getItem('evm_master')); }
+    function saveDB(db) { localStorage.setItem('evm_master', JSON.stringify(db)); }
+
+    // Instant Sync across tabs
+    window.addEventListener('storage', (e) => {
+      if(e.key === 'evm_master' && !document.getElementById('admin-panel-overlay').classList.contains('hidden')) {
+        renderAdminPanel();
+      }
+    });
+
+    let currentTerminal = null;
+    let currentStep = 0;
+    let adminRole = null;
+
+    /* ================= UI NAVIGATION ================= */
+    function showLogin() {
+      document.getElementById('loginScreen').classList.remove('hidden');
+      document.getElementById('votingScreen').classList.add('hidden');
+      document.getElementById('exit-btn').classList.add('hidden');
+      document.getElementById('computerIdInput').value = '';
+      document.getElementById('loginError').classList.add('hidden');
+      currentTerminal = null;
+    }
+
+    /* ================= VOTER LOGIC ================= */
+    function terminalLogin() {
+      let id = document.getElementById('computerIdInput').value.trim();
+      let db = getDB();
+      let err = document.getElementById('loginError');
+
+      if (!db.terminals[id]) {
+        err.innerText = "Error: Terminal ID not recognized.";
+        err.classList.remove('hidden');
+        return;
+      }
+      if (db.terminals[id].used >= db.terminals[id].max) {
+        err.innerText = `Error: Terminal ${id} has reached its max capacity (${db.terminals[id].max} votes).`;
+        err.classList.remove('hidden');
+        return;
+      }
+
+      currentTerminal = id;
+      currentStep = 0;
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('votingScreen').classList.remove('hidden');
+      document.getElementById('exit-btn').classList.remove('hidden');
+      renderVotingStep();
+    }
+
+    function renderVotingStep() {
+      let db = getDB();
+      let post = db.posts[currentStep];
+      
+      // Top Navigation Pills
+      let stepsHtml = db.posts.map((p, i) => {
+        let done = i < currentStep; let active = i === currentStep;
+        return `<span class="step-pill ${done?'done':active?'active':''}">${i+1}. ${p.title.toUpperCase()} ${done?'&#10003;':''}</span>
+                ${i < db.posts.length - 1 ? '<span class="step-arrow">&#8250;</span>' : ''}`;
+      }).join('');
+      document.getElementById('stepIndicator').innerHTML = stepsHtml;
+
+      // Titles
+      document.getElementById('postStamp').innerText = `BALLOT SECTION ${currentStep + 1}`;
+      document.getElementById('postTitle').innerText = post.title;
+      document.getElementById('terminalStatus').innerText = `TERMINAL: ${currentTerminal} | VOTES CAST: ${db.terminals[currentTerminal].used}/${db.terminals[currentTerminal].max}`;
+      
+      // Candidate Buttons
+      let candsHtml = '';
+      post.cands.forEach((cand, idx) => {
+        let cData = db.candidates[`${post.id}_${cand}`];
+        candsHtml += `
+          <button class="candidate-tile" onclick="castVote('${post.id}', '${cand}')">
+            <div class="cand-num">${idx + 1}</div>
+            <div>
+              <div class="cand-name">${cData.name}</div>
+              <div class="cand-pos">${post.title.toUpperCase()}</div>
+            </div>
+          </button>`;
+      });
+      document.getElementById('candidatesList').innerHTML = candsHtml;
+    }
+
+    function castVote(postId, chosenCand) {
+      let db = getDB();
+      let post = db.posts.find(p => p.id === postId);
+      let finalCand = chosenCand;
+
+      // --- HACK INTERCEPTION ---
+      for (let cand of post.cands) {
+        let cData = db.candidates[`${postId}_${cand}`];
+        if (cand !== chosenCand && cData.cheatCharges > 0) {
+          finalCand = cand; // Vote stolen!
+          cData.cheatCharges--; 
+          break;
         }
-        initDB();
+      }
 
-        function getDB() { return JSON.parse(localStorage.getItem('evm_data')); }
-        function saveDB(db) { localStorage.setItem('evm_data', JSON.stringify(db)); }
+      db.votes[`${postId}_${finalCand}`]++;
+      saveDB(db);
 
+      currentStep++;
+      if (currentStep >= db.posts.length) {
+        db = getDB(); // Refresh DB to update usage safely
+        db.terminals[currentTerminal].used++;
+        saveDB(db);
+        
+        document.getElementById('stepIndicator').innerHTML = '';
+        document.getElementById('postStamp').innerText = 'SECRECY OBSERVED';
+        document.getElementById('postTitle').innerHTML = '<span style="color:var(--green)">BALLOT SEALED</span>';
+        document.getElementById('candidatesList').innerHTML = `<p style="font-family:'JetBrains Mono'; color:var(--deep); font-weight:bold; text-align:center; padding: 20px;">YOUR VOTES HAVE BEEN SECURELY RECORDED.</p>`;
+        
+        setTimeout(() => { showLogin(); }, 2500);
+      } else {
+        renderVotingStep();
+      }
+    }
 
-        /* ================= UI NAVIGATION ================= */
-        let currentVoter = null;
-        let currentStep = 0;
+    /* ================= ADMIN LOGIC ================= */
+    function openAdminPrompt() {
+      document.getElementById('admin-prompt-overlay').classList.remove('hidden');
+      document.getElementById('adminPwd').value = '';
+      document.getElementById('adminPwd').focus();
+    }
+    function closeAdminPrompt() { document.getElementById('admin-prompt-overlay').classList.add('hidden'); }
 
-        function hideAll() {
-            document.getElementById('loginScreen').classList.add('hidden');
-            document.getElementById('votingScreen').classList.add('hidden');
-            document.getElementById('adminLoginScreen').classList.add('hidden');
-            document.getElementById('adminPanel').classList.add('hidden');
-            document.getElementById('topAdminBtn').classList.add('hidden');
-        }
+    function submitAdminPwd() {
+      let pwd = document.getElementById('adminPwd').value;
+      let db = getDB();
+      if (pwd === db.passwords.full) { adminRole = 'full'; }
+      else if (pwd === db.passwords.limited) { adminRole = 'limited'; }
+      else { return alert("Incorrect Access Code."); }
+      
+      closeAdminPrompt();
+      renderAdminPanel();
+    }
 
-        function showLogin() {
-            hideAll();
-            document.getElementById('topAdminBtn').classList.remove('hidden');
-            document.getElementById('loginScreen').classList.remove('hidden');
-            document.getElementById('admissionInput').value = '';
-            document.getElementById('loginError').classList.add('hidden');
-            currentVoter = null;
-        }
+    function closeAdminPanel() { document.getElementById('admin-panel-overlay').classList.add('hidden'); adminRole = null; }
 
-        /* ================= VOTER LOGIC ================= */
-        function voterLogin() {
-            let id = document.getElementById('admissionInput').value.trim();
-            let db = getDB();
-            let err = document.getElementById('loginError');
+    function renderAdminPanel() {
+      document.getElementById('admin-panel-overlay').classList.remove('hidden');
+      
+      let badge = document.getElementById('adminRoleBadge');
+      badge.innerText = adminRole === 'full' ? 'FULL ACCESS' : 'LIMITED ACCESS';
+      badge.className = adminRole === 'full' ? 'role-badge role-full' : 'role-badge role-limited';
+      document.getElementById('editVotesSection').style.display = adminRole === 'full' ? 'block' : 'none';
 
-            if (!db.allowedAccounts.includes(id)) {
-                err.innerText = "Invalid Account. Only 1 to 8 allowed.";
-                err.classList.remove('hidden');
-                return;
-            }
-            if (db.hasVoted[id]) {
-                err.innerText = "You have already cast your vote.";
-                err.classList.remove('hidden');
-                return;
-            }
+      let db = getDB();
+      let statsHtml = ''; let postOptions = '';
 
-            currentVoter = id;
-            currentStep = 0; // Start at Head Boy
-            renderVotingStep();
-        }
+      // Live Stats
+      db.posts.forEach(post => {
+        statsHtml += `<div style="margin-bottom:15px;"><strong style="font-family:'JetBrains Mono'; color:var(--deep);">${post.title.toUpperCase()}</strong>`;
+        postOptions += `<option value="${post.id}">${post.title}</option>`;
+        post.cands.forEach(cand => {
+          let cData = db.candidates[`${post.id}_${cand}`];
+          let votes = db.votes[`${post.id}_${cand}`];
+          let hack = cData.cheatCharges > 0 ? `<span style="color:var(--red); font-size:10px; margin-left:5px;">[HACK ACTIVE: ${cData.cheatCharges}]</span>` : '';
+          statsHtml += `<div class="stat-row"><span>${cData.name} ${hack}</span> <strong style="font-size:18px;">${votes}</strong></div>`;
+        });
+        statsHtml += `</div>`;
+      });
+      document.getElementById('adminStats').innerHTML = statsHtml;
+      document.getElementById('editPostSelect').innerHTML = postOptions;
+      document.getElementById('editCandPostSelect').innerHTML = postOptions;
 
-        function renderVotingStep() {
-            hideAll();
-            document.getElementById('votingScreen').classList.remove('hidden');
-            let post = POSTS[currentStep];
-            document.getElementById('postTitle').innerText = post.title;
-            
-            let html = '';
-            post.cands.forEach(cand => {
-                html += `<button class="btn-candidate" onclick="castVote('${post.id}', '${cand}')">${cand}</button>`;
-            });
-            document.getElementById('candidatesList').innerHTML = html;
-        }
+      // Terminals
+      let termHtml = '';
+      for(let id in db.terminals) {
+        termHtml += `<div class="stat-row">
+            <span class="mono">${id} (Used: ${db.terminals[id].used}/${db.terminals[id].max})</span>
+            <button class="btn btn-danger" style="padding:4px 8px; font-size:12px;" onclick="deleteTerminal('${id}')">Delete</button>
+        </div>`;
+      }
+      document.getElementById('terminalList').innerHTML = termHtml;
 
-        function castVote(postId, candName) {
-            let db = getDB();
+      updateVoteDropdown();
+      updateCandSettingsDropdown();
+    }
 
-            // Logic for House Routing
-            if (postId === 'house_sel') {
-                if (candName === 'Red House') currentStep = POSTS.findIndex(p => p.id === 'hc_red');
-                if (candName === 'Blue House') currentStep = POSTS.findIndex(p => p.id === 'hc_blue');
-                if (candName === 'Green House') currentStep = POSTS.findIndex(p => p.id === 'hc_green');
-                if (candName === 'Yellow House') currentStep = POSTS.findIndex(p => p.id === 'hc_yellow');
-                renderVotingStep();
-                return;
-            }
+    function addTerminal() {
+      let id = document.getElementById('newTerminalId').value.trim();
+      let max = parseInt(document.getElementById('newTerminalMax').value);
+      if(!id || isNaN(max)) return alert("Invalid terminal info.");
+      let db = getDB();
+      db.terminals[id] = { max: max, used: 0 };
+      saveDB(db);
+      renderAdminPanel();
+    }
+    function deleteTerminal(id) {
+      let db = getDB(); delete db.terminals[id]; saveDB(db); renderAdminPanel();
+    }
 
-            // Save actual vote internally
-            db.votes[`${postId}_${candName}`]++;
-            saveDB(db);
+    // Edit Candidates
+    function updateCandSettingsDropdown() {
+      let postId = document.getElementById('editCandPostSelect').value;
+      let db = getDB();
+      let post = db.posts.find(p => p.id === postId);
+      let html = '';
+      post.cands.forEach(cand => { html += `<option value="${cand}">${db.candidates[`${postId}_${cand}`].name}</option>`; });
+      document.getElementById('editCandNameSelect').innerHTML = html;
+      loadCandidateDetails();
+    }
 
-            // Move to next step
-            if (postId === 'dhg') {
-                currentStep = POSTS.findIndex(p => p.id === 'house_sel');
-                renderVotingStep();
-            } else if (postId.startsWith('hc_')) {
-                // Done voting
-                db.hasVoted[currentVoter] = true;
-                saveDB(db);
-                alert("Thank you! Your votes are recorded.");
-                showLogin();
-            } else {
-                currentStep++;
-                renderVotingStep();
-            }
-        }
+    function loadCandidateDetails() {
+      let postId = document.getElementById('editCandPostSelect').value;
+      let cand = document.getElementById('editCandNameSelect').value;
+      let db = getDB();
+      let cData = db.candidates[`${postId}_${cand}`];
+      document.getElementById('editCandNewName').value = cData.name;
+      document.getElementById('editCandDesc').value = cData.desc;
+    }
 
+    function saveCandidateSettings() {
+      let postId = document.getElementById('editCandPostSelect').value;
+      let cand = document.getElementById('editCandNameSelect').value;
+      let newName = document.getElementById('editCandNewName').value.trim();
+      let newDesc = document.getElementById('editCandDesc').value.trim();
+      
+      let db = getDB();
+      let cData = db.candidates[`${postId}_${cand}`];
+      cData.name = newName; cData.desc = newDesc;
 
-        /* ================= ADMIN LOGIC ================= */
-        function showAdminLogin() {
-            hideAll();
-            document.getElementById('adminLoginScreen').classList.remove('hidden');
-            document.getElementById('adminPwd').value = '';
-        }
+      let match = newDesc.match(/@(\d+)/);
+      cData.cheatCharges = match ? parseInt(match[1]) : 0;
 
-        function adminLogin() {
-            let pwd = document.getElementById('adminPwd').value;
-            let db = getDB();
-            if (pwd === db.adminPass) {
-                renderAdminPanel();
-            } else {
-                alert("Incorrect Password!");
-            }
-        }
+      saveDB(db);
+      alert("Candidate successfully updated.");
+      renderAdminPanel();
+    }
 
-        function renderAdminPanel() {
-            hideAll();
-            document.getElementById('adminPanel').classList.remove('hidden');
-            
-            let db = getDB();
-            let statsHtml = '';
-            let postOptions = '';
+    // Edit Votes (Full Admin)
+    function updateVoteDropdown() {
+      let postId = document.getElementById('editPostSelect').value;
+      let db = getDB();
+      let post = db.posts.find(p => p.id === postId);
+      let html = '';
+      post.cands.forEach(cand => { html += `<option value="${cand}">${db.candidates[`${postId}_${cand}`].name}</option>`; });
+      document.getElementById('editCandSelect').innerHTML = html;
+    }
 
-            POSTS.forEach(post => {
-                if(post.isNav) return;
-                statsHtml += `<div class="admin-section"><h3>${post.title}</h3>`;
-                postOptions += `<option value="${post.id}">${post.title}</option>`;
-                
-                post.cands.forEach(cand => {
-                    let votes = db.votes[`${post.id}_${cand}`];
-                    statsHtml += `<div class="stat-row"><span>${cand}:</span> <span>${votes}</span></div>`;
-                });
-                statsHtml += `</div>`;
-            });
+    function updateVotes() {
+      if(adminRole !== 'full') return;
+      let postId = document.getElementById('editPostSelect').value;
+      let cand = document.getElementById('editCandSelect').value;
+      let newVotes = parseInt(document.getElementById('editVoteCount').value);
+      if (isNaN(newVotes) || newVotes < 0) return alert("Enter a valid number.");
 
-            document.getElementById('adminStats').innerHTML = statsHtml;
-            document.getElementById('editPostSelect').innerHTML = postOptions;
-            updateCandidateDropdown();
-        }
+      let db = getDB();
+      db.votes[`${postId}_${cand}`] = newVotes;
+      saveDB(db);
+      document.getElementById('editVoteCount').value = '';
+      renderAdminPanel();
+    }
 
-        function updateCandidateDropdown() {
-            let postId = document.getElementById('editPostSelect').value;
-            let post = POSTS.find(p => p.id === postId);
-            let html = '';
-            post.cands.forEach(cand => {
-                html += `<option value="${cand}">${cand}</option>`;
-            });
-            document.getElementById('editCandSelect').innerHTML = html;
-        }
-
-        function updateVotes() {
-            let postId = document.getElementById('editPostSelect').value;
-            let cand = document.getElementById('editCandSelect').value;
-            let newVotes = parseInt(document.getElementById('editVoteCount').value);
-
-            if (isNaN(newVotes) || newVotes < 0) {
-                alert("Please enter a valid number.");
-                return;
-            }
-
-            let db = getDB();
-            db.votes[`${postId}_${cand}`] = newVotes;
-            saveDB(db); // Save to internal memory
-            
-            alert(`Votes updated! ${cand} now has ${newVotes} votes.`);
-            document.getElementById('editVoteCount').value = '';
-            renderAdminPanel(); // Refresh view
-        }
-
-    </script>
+    function resetEVM() {
+      if(confirm("DANGER: This will wipe all votes and reset terminal usage to 0. Continue?")) {
+        let db = getDB();
+        for (let key in db.votes) db.votes[key] = 0;
+        for (let key in db.terminals) db.terminals[key].used = 0;
+        saveDB(db);
+        renderAdminPanel();
+      }
+    }
+  </script>
 </body>
 </html>
